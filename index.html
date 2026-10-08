@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ROV Tournament – 4 ทีม</title>
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f4f6fb;margin:0;color:#20242c}.wrap{max-width:1100px;margin:auto;padding:20px}.card{background:#fff;border-radius:16px;padding:18px;margin:14px 0;box-shadow:0 4px 18px #00000012}h1{margin:0 0 6px}.muted{color:#68707d}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.team input,.player input,.match input,.match select{width:100%;box-sizing:border-box;padding:9px;border:1px solid #ccd2dc;border-radius:9px}.team{border:1px solid #e0e4eb;border-radius:12px;padding:12px}.team h3{margin:0 0 8px}.players{display:grid;gap:6px}.matches{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.match{border:1px solid #e0e4eb;border-radius:12px;padding:12px}.score{display:flex;align-items:center;gap:8px;margin:10px 0}.score input{width:70px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}button{border:0;border-radius:10px;padding:10px 15px;cursor:pointer;font-weight:700}.primary{background:#1f6feb;color:white}.danger{background:#e55353;color:#fff}.table{width:100%;border-collapse:collapse}.table th,.table td{border-bottom:1px solid #e5e8ed;padding:9px;text-align:center}.table th{background:#f1f4f8}.rank{font-weight:800}.note{background:#fff8df;border-left:4px solid #f0b400;padding:10px;border-radius:8px}.mvp-list{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.pill{background:#eef3ff;border-radius:10px;padding:10px}.small{font-size:13px}@media(max-width:750px){.grid,.matches,.mvp-list{grid-template-columns:1fr}.wrap{padding:10px}}
+</style></head>
+<body><div class="wrap">
+<div class="card"><h1>🏆 ROV Tournament</h1><div class="muted">การแข่งขัน 4 ทีม • พบกันหมด • BO1 • ชนะ 3 คะแนน / แพ้ 0 คะแนน</div></div>
+<div class="card"><h2>1. รายชื่อทีมและผู้เล่น</h2><div class="grid" id="teams"></div></div>
+<div class="card"><h2>2. ตารางการแข่งขัน</h2><div class="note small">กรอกคะแนนแต่ละเกม แล้วเลือก MVP จากรายชื่อผู้เล่นของทีมที่แข่งกัน ระบบจะคำนวณตารางคะแนนให้อัตโนมัติ</div><div class="matches" id="matches"></div></div>
+<div class="card"><h2>3. ตารางคะแนน</h2><table class="table"><thead><tr><th>อันดับ</th><th>ทีม</th><th>แข่ง</th><th>ชนะ</th><th>แพ้</th><th>คะแนน</th><th>ผลต่างเกม</th></tr></thead><tbody id="standings"></tbody></table></div>
+<div class="card"><h2>4. สรุป MVP</h2><div class="mvp-list" id="mvpList"></div></div>
+<div class="row"><button class="primary" onclick="window.print()">🖨️ พิมพ์ / บันทึก PDF</button><button class="danger" onclick="resetAll()">↺ รีเซ็ตข้อมูล</button></div>
+</div>
+<script>
+const teams=[0,1,2,3].map(i=>({name:`ทีม ${String.fromCharCode(65+i)}`,players:['ผู้เล่น 1','ผู้เล่น 2','ผู้เล่น 3','ผู้เล่น 4','ผู้เล่น 5']}));
+const fixtures=[[0,1],[2,3],[0,2],[1,3],[0,3],[1,2]];
+const data=fixtures.map((p,i)=>({a:p[0],b:p[1],sa:'',sb:'',mvp:''}));
+function renderTeams(){document.getElementById('teams').innerHTML=teams.map((t,i)=>`<div class="team"><h3>ทีม ${i+1}</h3><input value="${esc(t.name)}" oninput="teams[${i}].name=this.value;renderAll()" aria-label="ชื่อทีม"><div class="players">${t.players.map((p,j)=>`<input class="player" value="${esc(p)}" oninput="teams[${i}].players[${j}]=this.value;renderAll()" placeholder="ผู้เล่น ${j+1}">`).join('')}</div></div>`).join('')}
+function renderMatches(){document.getElementById('matches').innerHTML=data.map((m,i)=>{let opts=[...teams[m.a].players,...teams[m.b].players];return `<div class="match"><b>เกมที่ ${i+1}: ${esc(teams[m.a].name)} vs ${esc(teams[m.b].name)}</b><div class="score"><input type="number" min="0" value="${m.sa}" oninput="data[${i}].sa=this.value;renderStandings()"><strong>:</strong><input type="number" min="0" value="${m.sb}" oninput="data[${i}].sb=this.value;renderStandings()"></div><label class="small">MVP</label><select onchange="data[${i}].mvp=this.value;renderMVP()"><option value="">-- เลือก MVP --</option>${opts.map(p=>`<option ${m.mvp===p?'selected':''}>${esc(p)}</option>`).join('')}</select></div>`}).join('')}
+function renderStandings(){let s=teams.map((t,i)=>({i,name:t.name,p:0,w:0,l:0,gd:0}));data.forEach(m=>{if(m.sa!==''&&m.sb!==''&&!isNaN(+m.sa)&&!isNaN(+m.sb)){let a=+m.sa,b=+m.sb;s[m.a].p++;s[m.b].p++;s[m.a].gd+=a-b;s[m.b].gd+=b-a;if(a>b){s[m.a].w++;s[m.a].points=(s[m.a].points||0)+3;s[m.b].l++}else if(b>a){s[m.b].w++;s[m.b].points=(s[m.b].points||0)+3;s[m.a].l++}}});s.forEach(x=>x.points=x.points||0);s.sort((a,b)=>b.points-a.points||b.gd-a.gd||b.w-a.w);document.getElementById('standings').innerHTML=s.map((x,k)=>`<tr><td class="rank">${k+1}</td><td>${esc(x.name)}</td><td>${x.p}</td><td>${x.w}</td><td>${x.l}</td><td><b>${x.points}</b></td><td>${x.gd>0?'+':''}${x.gd}</td></tr>`).join('')}
+function renderMVP(){let counts={};data.forEach(m=>{if(m.mvp)counts[m.mvp]=(counts[m.mvp]||0)+1});document.getElementById('mvpList').innerHTML=teams.map(t=>`<div class="pill"><b>${esc(t.name)}</b><div>${t.players.map(p=>`${esc(p)}: ${counts[p]||0}`).join('<br>')}</div></div>`).join('')}
+function renderAll(){renderTeams();renderMatches();renderStandings();renderMVP()}
+function resetAll(){if(!confirm('ต้องการรีเซ็ตข้อมูลทั้งหมดหรือไม่?'))return;teams.forEach((t,i)=>{t.name=`ทีม ${String.fromCharCode(65+i)}`;t.players=['ผู้เล่น 1','ผู้เล่น 2','ผู้เล่น 3','ผู้เล่น 4','ผู้เล่น 5']});data.forEach(m=>{m.sa='';m.sb='';m.mvp=''});renderAll()}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+renderAll();
+</script></body></html>
